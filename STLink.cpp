@@ -19,8 +19,10 @@ STLink::STLink() {
     proc.start("ST-LINK_CLI.exe", {"-c", "swd"});
     if (wait_for_command()) {
         std::string result = proc.readAll().toStdString();
-        if (result.find_first_of("No ST-LINK detected!") != std::string::npos) {
+        if (result.find("No ST-LINK detected!") != std::string::npos) {
             throw std::domain_error("No ST-Link detected");
+        } else {
+            connection_state = true;
         }
     } else {
         throw std::domain_error("ST-Link_CLI calling failed.");
@@ -31,31 +33,43 @@ STLink::STLink() {
 
 void STLink::program(QString filename) {
     QStringList args = {"-c", "swd", "UR", "-P", filename};
-
     proc.start("ST-LINK_CLI.exe", args);
-    if (wait_for_command()) {
+    if (wait_for_command(20000)) {
         QByteArray result = proc.readAll();
-        // TODO
+        qDebug("%s", result.toStdString().c_str());
+    } else {
+        qDebug("Failed");
     }
 
     proc.close();
+}
+
+void STLink::verify(QString filename)
+{
+    proc.start("ST-LINK_CLI.exe", {"-c", "swd", "-V", filename});
+    if (wait_for_command()) {
+        std::string result = proc.readAll().toStdString();
+    }
 }
 
 bool STLink::set_read_protection(ProtectionLevel level)
 {
+    bool ret_value = false;
     proc.start("ST-LINK_CLI.exe", {"-c", "swd", "-OB", "RDP", QString::number(level)});
     if (wait_for_command()) {
+        std::string result = proc.readAll().toStdString();
         proc.close();
-        return true;
+        if (result.find("Option bytes updated successfully.") != std::string::npos) {
+            ret_value = true;
+        }
     }
 
     proc.close();
-    return false;
+    return ret_value;
 }
 
 bool STLink::erase() {
     bool ret_value = false;
-
     proc.start("ST-LINK_CLI.exe", {"-c", "swd", "-ME"});
     if (wait_for_command()) {
         std::string result = proc.readAll().toStdString();

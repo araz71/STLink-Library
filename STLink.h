@@ -38,6 +38,7 @@ public:
     explicit STLink();
 
     void program(QString filename);
+    void verify(QString filename);
     bool set_read_protection(STLink::ProtectionLevel level);
     bool erase();
     std::map<STLink::ConnectionInformation, std::string> get_connection_information(bool &ok);
